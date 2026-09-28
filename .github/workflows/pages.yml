@@ -1,0 +1,53 @@
+name: Publish yt-dlp Pages UI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/**'
+      - 'web-tests/**'
+      - 'devscripts/package_pages_bridge.py'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yt-dlp-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test bridge and command generation
+        run: |
+          python -m unittest discover -s web-tests -p 'test_*.py' -v
+          node --test web-tests/core.test.mjs
+          node --check docs/app.js
+      - name: Package local bridge
+        run: python devscripts/package_pages_bridge.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

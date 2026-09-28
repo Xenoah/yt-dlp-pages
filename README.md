@@ -1,4 +1,7 @@
 <!-- MANPAGE: BEGIN EXCLUDED SECTION -->
+> **このフォークのWeb UI:** [yt-dlp Pagesを開く](https://xenoah.github.io/yt-dlp-pages/) · [日本語の導入手順](WEB_UI.md)
+> GitHub Pagesの画面から、同じPC上のyt-dlpを操作できます。ローカルブリッジが必要です。
+
 <div align="center">
 
 [![YT-DLP](https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/.github/banner.svg)](#readme)
