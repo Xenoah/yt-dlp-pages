@@ -11,4 +11,4 @@ fi
 if ! .venv/bin/python -c 'import yt_dlp' 2>/dev/null; then
     .venv/bin/python -m pip install --upgrade 'yt-dlp[default]'
 fi
-exec .venv/bin/python bridge.py
+exec .venv/bin/python bridge.py "$@"

@@ -132,7 +132,7 @@ yt-dlp-plugins
 
 # Packages
 yt_dlp_ejs/
-# Generated web companion and local Python environments
-/docs/yt-dlp-pages-bridge.zip
+# Local UI packages and Python environments
+/dist/yt-dlp-local.zip
 /docs/bridge/.venv/
 !/docs/bridge/README.txt

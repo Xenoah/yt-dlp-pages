@@ -8,6 +8,8 @@ const active = job => ['queued','running','processing'].includes(job.status);
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const optionFields = {quality:'quality', container:'container', audioFormat:'audio-format', subtitles:'subtitles', subLang:'sub-lang', metadata:'metadata', thumbnail:'thumbnail', playlist:'playlist', playlistLimit:'playlist-limit'};
 
+try {state.bridge = bridgeUrl(location.origin);} catch { /* Manual connection when opened outside the local server. */ }
+
 try {
   const stored = JSON.parse(localStorage.getItem('yt-dlp-pages-options') || '{}');
   for (const key of Object.keys(DEFAULTS)) {
@@ -124,12 +126,12 @@ async function api(path, body, timeout=18000) {
       signal:controller.signal, credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer',
     });
     let data;
-    try { data = await response.json(); } catch { throw new Error('接続先がyt-dlp Pagesブリッジではないようです。アドレスを確認してください。'); }
+    try { data = await response.json(); } catch { throw new Error('接続先がyt-dlp Localではないようです。起動ウィンドウのアドレスを確認してください。'); }
     if (!response.ok) throw new Error(data.error || `接続エラー (${response.status})`);
     return data;
   } catch(error) {
-    if (error.name === 'AbortError') throw new Error('応答がありません。ブリッジの起動状態と、ブラウザのローカルネットワークへのアクセス許可を確認してください。');
-    if (error instanceof TypeError) throw new Error('接続できません。ブリッジを起動し、Chrome / Edgeのローカルネットワークへのアクセスを許可してください。');
+    if (error.name === 'AbortError') throw new Error('応答がありません。起動ウィンドウが開いているか確認し、もう一度接続してください。');
+    if (error instanceof TypeError) throw new Error('接続できません。起動ファイルを実行し、ウィンドウに表示された Open のURLを開いてください。');
     throw error;
   } finally {clearTimeout(timer);}
 }
@@ -149,7 +151,7 @@ async function connect(event) {
   try {
     state.bridge = bridgeUrl($('#bridge-address').value);
     state.token = $('#bridge-token').value.trim();
-    if (!state.token) throw new Error('ブリッジに表示された接続キーを入力してください。');
+    if (!state.token) throw new Error('起動ウィンドウに表示された接続キーを入力してください。');
     const health = await api('/api/health');
     if (!health.version || !('engine' in health)) throw new Error('ブリッジの応答形式が正しくありません。');
     if (!health.engine) throw new Error('yt-dlpが見つかりません。起動セットの手順でインストールしてから再接続してください。');
@@ -171,10 +173,10 @@ async function connect(event) {
     state.connected = false;
     document.body.classList.remove('connected');
     $('#connection-label').textContent = '未接続';
-    $('#side-status').textContent = 'ブリッジ未接続';
+    $('#side-status').textContent = 'ローカル接続待ち';
     $('#connection-banner').classList.remove('connected');
     $('#connection-banner b').textContent = '接続を確認してください';
-    $('#connection-banner p').textContent = 'ブリッジを起動し、接続キーを入力してください。';
+    $('#connection-banner p').textContent = '起動ウィンドウの Open のURLを開くか、接続キーを入力してください。';
     $('#capabilities').hidden = true;
     errorAt('#connect-error', error.message);
     openConnection();
@@ -296,7 +298,7 @@ async function jobAction(event) {
       document.body.append(anchor);
       anchor.click();
       anchor.remove();
-      toast('ブラウザに保存を要求しました。ファイルはブリッジの保存先にもあります。');
+      toast('ブラウザに保存を要求しました。ファイルはPCの保存先にもあります。');
     }
     if (action !== 'save') await poll();
   } catch(error) {toast(error.message);}
@@ -339,12 +341,13 @@ settingsChanged();
 const fragment = new URLSearchParams(location.hash.slice(1));
 if (fragment.has('token')) {
   const token = fragment.get('token');
-  const address = fragment.get('bridge') || state.bridge;
+  const address = fragment.get('bridge') || location.origin;
   history.replaceState(null, '', location.pathname + location.search);
   try {
     state.bridge = bridgeUrl(address);
     $('#bridge-address').value = state.bridge;
     $('#bridge-token').value = token;
-    openConnection();
+    if (state.bridge === location.origin) connect();
+    else openConnection();
   } catch(error) {toast(error.message);}
 }

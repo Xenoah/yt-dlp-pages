@@ -1,6 +1,6 @@
 <!-- MANPAGE: BEGIN EXCLUDED SECTION -->
-> **このフォークのWeb UI:** [yt-dlp Pagesを開く](https://xenoah.github.io/yt-dlp-pages/) · [日本語の導入手順](WEB_UI.md)
-> GitHub Pagesの画面から、同じPC上のyt-dlpを操作できます。ローカルブリッジが必要です。
+> **このフォークのローカルWeb UI:** [日本語の導入手順](WEB_UI.md)
+> ZIPを展開して `start-windows.cmd`（macOS / Linuxは `sh start-macos.command`）を実行。画面・実行・保存がこのPCで完結します。ホスティングや画面のビルドは不要です。
 
 <div align="center">
 

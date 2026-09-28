@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Loopback-only yt-dlp companion for the GitHub Pages UI (Python 3.10+)."""
+"""Run the yt-dlp web interface on this PC (Python 3.10+)."""
 
 import argparse
 import collections
 import contextlib
 import hmac
 import json
-import mimetypes
 import os
 from pathlib import Path
 import secrets
@@ -20,12 +19,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import quote, unquote, urlsplit
 import webbrowser
 
-VERSION = '1.0.0'
-PAGES = 'https://xenoah.github.io/yt-dlp-pages/'
+VERSION = '1.1.0'
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 ENGINE_CWD = REPO if (REPO / 'yt_dlp').is_dir() else HERE
 UI_ROOT = HERE / 'ui' if (HERE / 'ui').is_dir() else HERE.parent
+UI_TYPES = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.mjs': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.svg': 'image/svg+xml',
+}
 PROGRESS = ('download:@@progress:{"downloaded":%(progress.downloaded_bytes)j,'
             '"total":%(progress.total_bytes,progress.total_bytes_estimate)j,'
             '"speed":%(progress.speed)j,"eta":%(progress.eta)j}')
@@ -333,17 +338,17 @@ class Engine:
 class Server(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, port, engine, origins):
+    def __init__(self, port, engine):
         super().__init__(('127.0.0.1', port), Handler)
         self.engine = engine
         self.token = secrets.token_urlsafe(32)
-        self.origins = set(origins) | {f'http://127.0.0.1:{self.server_port}', f'http://localhost:{self.server_port}'}
+        self.origins = {f'http://127.0.0.1:{self.server_port}', f'http://localhost:{self.server_port}'}
         self.tickets = {}
         self.ticket_lock = threading.Lock()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'YTdlpPages/1'
+    server_version = 'YTdlpLocal/1'
 
     def log_message(self, fmt, *args):
         # Never log bearer tokens, URL queries, or one-use download tickets.
@@ -393,7 +398,6 @@ class Handler(BaseHTTPRequestHandler):
         self.common_headers()
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
-        self.send_header('Access-Control-Allow-Private-Network', 'true')
         self.send_header('Access-Control-Max-Age', '600')
         self.end_headers()
 
@@ -433,7 +437,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         file = UI_ROOT / relative
         if not file.is_file():
-            self.send_json(404, {'error': f'操作画面は {PAGES} で開いてください。'})
+            self.send_json(404, {'error': '操作画面のファイルが見つかりません。ZIPをすべて展開してから起動してください。'})
             return
         self.send_file(file)
 
@@ -443,7 +447,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.common_headers()
                 self.send_header('Content-Type', 'application/octet-stream' if attachment else
-                                 (mimetypes.guess_type(path.name)[0] or 'application/octet-stream'))
+                                 UI_TYPES.get(path.suffix, 'application/octet-stream'))
                 self.send_header('Content-Length', str(path.stat().st_size))
                 if attachment:
                     self.send_header('Content-Disposition', "attachment; filename*=UTF-8''" + quote(path.name))
@@ -497,24 +501,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=9731)
     parser.add_argument('--output', default=str(Path.home() / 'Downloads' / 'yt-dlp-pages'))
-    parser.add_argument('--origin', action='append', default=['https://xenoah.github.io'])
-    parser.add_argument('--no-open', action='store_true')
-    parser.add_argument('--local', action='store_true', help='Open the bundled UI instead of GitHub Pages')
+    parser.add_argument('--no-open', action='store_true', help='Print the local URL without opening a browser')
+    parser.add_argument('--local', action='store_true', help=argparse.SUPPRESS)  # Compatibility with older shortcuts.
     args = parser.parse_args()
-    for origin in args.origin:
-        parsed = urlsplit(origin)
-        if parsed.scheme not in ('http', 'https') or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:
-            parser.error('--origin must be an exact origin without a path, e.g. https://example.github.io')
+    if not 0 <= args.port <= 65535:
+        parser.error('--port must be between 0 and 65535')
     engine = Engine(args.output)
     try:
-        server = Server(args.port, engine, args.origin)
+        server = Server(args.port, engine)
     except OSError as error:
         engine.close()
         parser.exit(1, f'Cannot start bridge: {error}\nTry --port 9732\n')
     local = f'http://127.0.0.1:{server.server_port}'
-    base = local + '/' if args.local else PAGES
-    link = base + '#token=' + quote(server.token) + '&bridge=' + quote(local, safe='')
-    print(f'\nyt-dlp Pages Bridge v{VERSION}\nAddress: {local}\nConnection key: {server.token}\n'
+    link = local + '/#token=' + quote(server.token)
+    print(f'\nyt-dlp Local v{VERSION}\nAddress: {local}\nConnection key: {server.token}\n'
           f'Output: {engine.output}\n\nOpen: {link}\n\nKeep this window open. Ctrl+C to stop.\n', flush=True)
     if not args.no_open:
         webbrowser.open(link)

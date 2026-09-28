@@ -21,13 +21,14 @@ if not exist .venv\Scripts\python.exe (
 )
 .venv\Scripts\python.exe -c "import yt_dlp" >nul 2>nul
 if errorlevel 1 (
-  echo Installing yt-dlp in the bridge's own Python environment...
+  echo Installing yt-dlp in the app's own Python environment...
   .venv\Scripts\python.exe -m pip install --upgrade "yt-dlp[default]"
   if errorlevel 1 goto fail
 )
-.venv\Scripts\python.exe bridge.py
+.venv\Scripts\python.exe bridge.py %*
+set "YTDLP_EXIT_CODE=%errorlevel%"
 pause
-exit /b 0
+exit /b %YTDLP_EXIT_CODE%
 :fail
 echo Setup failed. Check your internet connection and Python installation.
 pause

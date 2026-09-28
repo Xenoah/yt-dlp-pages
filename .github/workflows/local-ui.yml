@@ -1,0 +1,48 @@
+name: Test local yt-dlp UI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/**'
+      - 'web-tests/**'
+      - 'start-windows.cmd'
+      - 'start-macos.command'
+      - 'devscripts/package_local_ui.py'
+      - '.github/workflows/local-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read  # Read sources for local UI tests.
+
+concurrency:
+  group: local-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test local UI (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '22'
+      - name: Test local HTTP server
+        run: python -m unittest discover -s web-tests -p 'test_*.py' -v
+      - name: Test command generation
+        run: node --test web-tests/core.test.mjs
+      - name: Check frontend syntax
+        run: node --check docs/app.js

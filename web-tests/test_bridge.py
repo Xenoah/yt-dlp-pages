@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
-spec = importlib.util.spec_from_file_location('pages_bridge', ROOT / 'docs/bridge/bridge.py')
+spec = importlib.util.spec_from_file_location('local_bridge', ROOT / 'docs/bridge/bridge.py')
 bridge = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bridge)
 
@@ -52,7 +52,8 @@ class HTTPTests(unittest.TestCase):
         cls.ffmpeg_patch.start()
         cls.command_patch.start()
         cls.engine = bridge.Engine(cls.temp.name)
-        cls.server = bridge.Server(0, cls.engine, ['https://xenoah.github.io'])
+        cls.server = bridge.Server(0, cls.engine)
+        cls.origin = f'http://127.0.0.1:{cls.server.server_port}'
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
 
@@ -68,7 +69,7 @@ class HTTPTests(unittest.TestCase):
 
     def request(self, method, path, data=None, auth=True, headers=None):
         connection = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
-        request_headers = {'Origin': 'https://xenoah.github.io'}
+        request_headers = {'Origin': self.origin}
         if auth:
             request_headers['Authorization'] = 'Bearer ' + self.server.token
         if data is not None:
@@ -98,12 +99,26 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(self.request('GET', '/api/jobs', auth=False)[0], 401)
         self.assertEqual(self.request('GET', '/api/jobs', headers={'Authorization': 'Bearer wrong'})[0], 401)
         self.assertEqual(self.request('GET', '/api/jobs', headers={'Origin': 'https://evil.example'})[0], 403)
+        self.assertEqual(self.request('GET', '/api/jobs', headers={'Origin': 'https://xenoah.github.io'})[0], 403)
+        self.assertEqual(self.request('GET', '/api/jobs', headers={'Origin': 'http://127.0.0.1:1'})[0], 403)
         self.assertEqual(self.request('GET', '/api/jobs', headers={'Origin': 'null'})[0], 403)
         self.assertEqual(self.request('GET', '/api/jobs', headers={'Host': 'evil.example'})[0], 403)
         status, headers, _ = self.request('OPTIONS', '/api/jobs', auth=False)
         self.assertEqual(status, 204)
-        self.assertEqual(headers['Access-Control-Allow-Origin'], 'https://xenoah.github.io')
-        self.assertEqual(headers['Access-Control-Allow-Private-Network'], 'true')
+        self.assertEqual(headers['Access-Control-Allow-Origin'], self.origin)
+        self.assertNotIn('Access-Control-Allow-Private-Network', headers)
+        local = f'http://localhost:{self.server.server_port}'
+        self.assertEqual(self.request('GET', '/api/jobs', headers={'Origin': local})[0], 200)
+
+    def test_local_ui_assets_and_module_mime_types(self):
+        for path, mime in (('/', 'text/html'), ('/app.js', 'text/javascript'), ('/core.mjs', 'text/javascript'),
+                           ('/styles.css', 'text/css'), ('/favicon.svg', 'image/svg+xml')):
+            with self.subTest(path=path):
+                status, headers, body = self.request('GET', path, auth=False)
+                self.assertEqual(status, 200)
+                self.assertEqual(headers['Content-Type'].split(';')[0], mime)
+                self.assertTrue(body)
+        self.assertEqual(self.request('GET', '/bridge/bridge.py', auth=False)[0], 404)
 
     def test_completed_files_and_one_use_download(self):
         job_id = self.enqueue()

@@ -1,128 +1,145 @@
-# yt-dlp Pages
+# yt-dlp Local
 
-yt-dlpを日本語のWeb画面から操作する、GitHub Pages向けのUIです。
+yt-dlpを日本語のWeb画面から操作する、PC用のローカルツールです。
+画面の配信、yt-dlp / FFmpegの実行、ファイルの保存をすべて同じPCで行います。
+**GitHub Pages・外部ホスティング・フロントエンドのビルドは不要です。**
 
-**操作画面:** https://xenoah.github.io/yt-dlp-pages/
-
-GitHub Pagesは静的ホスティングのため、Python製のyt-dlpを実行できません。
-このUIは **Pagesの画面 → 同じPCのローカルブリッジ → yt-dlp / FFmpeg** の構成で動作します。
-ブラウザだけで完結するダウンローダーではありません。動画の処理・保存は利用者のPCで行います。
-
-## 機能
-
-- 日本語UI、デスクトップ・狭い画面への対応
-- 動画（MP4 / MKV / WebM）、音声（MP3 / M4A / FLAC / WAV / Opus / 元形式）
-- 最高画質 / 4K / 1440p / 1080p / 720p / 480pの解像度上限
-- URLの一括投入（20件まで）、逐次キュー、進捗・速度・残り時間
-- 中止、再試行、実行ログ、完了ファイルの保存
-- 動画情報・サムネイルの取得（先頭URL）
-- 字幕・自動字幕の別ファイル保存、メタデータ、サムネイル保存
-- プレイリスト（最大100件、初期値20件、標準はOFF）
-- 接続不要のPowerShell / Bashコマンド生成
-- ブリッジは127.0.0.1に限定、接続キー認証、許可Originの照合
-- フロントエンドに外部CDN、広告、アクセス解析、GitHubトークンは不要
-
-## Windowsで使う
+## Windowsですぐ使う
 
 1. Python 3.10以降を [python.org](https://www.python.org/downloads/) から導入します。
-2. 操作画面の「起動セットをダウンロード」を押してZIPを展開します。
-3. `start-windows.cmd` を実行。初回は専用の `.venv` に `yt-dlp[default]` を導入します。
-4. 自動で開いたページの「接続する」を押します。必要に応じてブラウザのローカルネットワークへのアクセスを許可します。
-5. URLを貼り付けて形式を選び、「ダウンロード開始」を押します。
+2. [リポジトリのZIP](https://github.com/Xenoah/yt-dlp-pages/archive/refs/heads/master.zip) をダウンロードし、**フォルダー全体を展開**します。clone済みなら `git pull` で更新します。
+3. 展開したフォルダーの先頭にある **`start-windows.cmd`** を実行します。
+4. 初回は専用のPython環境と依存パッケージを準備します。その後、ブラウザで `http://127.0.0.1:9731/` が開いて自動接続します。
+5. URLを貼り付け、形式・画質を選んで「ダウンロード開始」を押します。
 
-**FFmpegは別途必要です。** Windows PowerShellで導入できます。
+利用中は起動ウィンドウを開いたままにしてください。**Ctrl+Cで終了**します。
+`docs/index.html` を直接開く必要はありません。ブラウザが開かない場合は、起動ウィンドウの `Open:` のURLをコピーして開いてください。
+
+**動画の結合・音声変換・メタデータ埋め込みにはFFmpegが必要です。**
+Windows PowerShellから導入できます。YouTube用のJavaScript処理にはDenoを推奨します。
 
 ```powershell
 winget install --id Gyan.FFmpeg -e
 winget install --id DenoLand.Deno -e
 ```
 
-DenoまたはNode.jsはYouTubeのJavaScript処理に利用します。導入後は起動ウィンドウを閉じ、再度起動してください。
-起動ウィンドウは利用中開いたままにします。Ctrl+Cで停止します。
+導入後は起動ウィンドウを閉じ、再度起動してください。
+初回のパッケージ導入と、外部サイトからのダウンロードにはインターネット接続が必要です。
 
 ## macOS / Linux
 
-Python 3.10以降、FFmpeg、DenoまたはNode.jsを用意し、展開したフォルダーで次を実行します。
+Python 3.10以降、FFmpeg、DenoまたはNode.jsを用意します。
+macOSでHomebrewを利用している場合は `brew install python ffmpeg deno` で導入できます。
+Linuxではディストリビューションのパッケージ等を利用してください。
+
+展開したフォルダーで実行します。
 
 ```sh
 sh start-macos.command
 ```
 
-macOSでHomebrewを利用している場合：`brew install python ffmpeg deno`。
-Linuxではディストリビューションのパッケージ等で用意してください。
+macOSは `start-macos.command` のダブルクリックでも起動できます。
+初回は `docs/bridge/.venv` に専用環境を作ります。Linuxでvenvが見つからない場合は、OSのPython venvパッケージを導入してください。
 
-## 保存・接続について
+## 起動オプション
 
-- 標準保存先：`~/Downloads/yt-dlp-pages/<job-id>/`。
-- ファイルはダウンロード完了時点でPCに保存されています。キューの保存ボタンはブラウザで別途保存する場合に使用します。
-- 字幕・サムネイルもキューから保存できます。取得できる形式・解像度は元サイト次第です。
-- FFmpegがない場合は、音声の「変換しない」かつメタデータOFFのみ実行できます。
-- このPC用の接続キーは毎回生成され、画面はメモリにのみ保持します。URLフラグメントから受け取ったキーは直ちにアドレスバーから除去します。
-- 設定のみlocalStorageに保存します。URL・接続キー・履歴はブラウザの永続ストレージに保存しません。
-- 接続先は同じPCの `http://127.0.0.1:<port>` または `http://localhost:<port>` に限定します。
-- ブラウザで接続をブロックされた場合、同梱画面を `--local` で開けます。
-- スマートフォンから別PCへの接続は対応していません。レスポンシブ表示はコマンド生成にも利用できます。
-- 履歴はブリッジのメモリ内に最大約200件保持。終了時に消えます。ファイルは残ります。
-- タブを閉じてもブリッジの処理は継続します。ブリッジ自体を停止すると進行中の処理も停止します。
-- Cookie送信、ログイン代行、任意の追加コマンド、外部へのサーバー公開には対応していません。
-
-起動オプションの例（Windows）：
+フォルダーの先頭で実行します。Windows PowerShellの場合：
 
 ```powershell
-.venv\Scripts\python.exe bridge.py --local
-.venv\Scripts\python.exe bridge.py --output "D:/Videos" --port 9732
-.venv\Scripts\python.exe -m pip install -U "yt-dlp[default]"
+.\start-windows.cmd --output "D:/Videos"
+.\start-windows.cmd --port 9732
+.\start-windows.cmd --no-open
 ```
 
-macOS/Linuxでは `.venv/bin/python` に読み替えてください。
+macOS / Linuxの場合：
 
-## リポジトリのyt-dlp本体を使う
+```sh
+sh start-macos.command --output "$HOME/Videos"
+sh start-macos.command --port 9732
+sh start-macos.command --no-open
+```
 
-このリポジトリをcloneした場合、ブリッジはリポジトリ内の `yt_dlp` を優先して実行します。
-元のyt-dlpコードには変更を加えていません。起動セット単体ではpipで導入したyt-dlpを使用します。
+- `--output`：保存先を変更します。
+- `--port`：使用中のポートを避けて起動します。開く画面と接続先も同じポートに変わります。
+- `--no-open`：ブラウザを自動起動せず、接続用URLだけを表示します。
+- 旧版の `--local` は互換性のため受け付けますが、現在は常にローカル起動です。
+
+Python環境を自分で用意する場合：
 
 ```sh
 python -m pip install -e '.[default]'
-python docs/bridge/bridge.py --local
+python docs/bridge/bridge.py
 ```
 
-## GitHub Pagesへの配置
+## 機能
 
-1. GitHubリポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** にします。
-2. **Actions → Publish yt-dlp Pages UI → Run workflow** を実行するか、`docs/` の変更をmasterへpushします。
-3. ビルドでテストと起動ZIPの生成を行い、`docs/` だけをPagesへ公開します。
+- 日本語UI、動画（MP4 / MKV / WebM）、音声（MP3 / M4A / FLAC / WAV / Opus / 元形式）
+- 最高画質 / 4K / 1440p / 1080p / 720p / 480pの解像度上限
+- URLの一括投入（20件まで）、逐次キュー、進捗・速度・残り時間
+- 中止、再試行、実行ログ、完了ファイルの保存
+- 先頭URLの動画情報・サムネイル取得
+- 字幕・自動字幕、サムネイルの別ファイル保存、メタデータ埋め込み
+- プレイリスト（最大100件、初期値20件、標準はOFF）
+- PowerShell / Bashコマンドの生成とコピー
 
-forkして利用する場合は `docs/bridge/bridge.py` の `PAGES` と既定の `--origin` を自分のPagesに変更してください。
-Originは `https://yourname.github.io` のようにパスを含めません。コマンドラインの `--origin` でも追加できます。
+フロントエンドに外部CDN、広告、アクセス解析、GitHubトークンは使いません。
+Node.jsは画面のビルドには不要です。Deno / Node.jsはyt-dlpが動画サイトのJavaScriptを処理するために利用します。
+
+## 保存・再接続
+
+- 標準保存先：`~/Downloads/yt-dlp-pages/<job-id>/`。以前の保存先を引き継ぎます。
+- ファイルはダウンロード完了時点でPCに保存されています。キューの保存ボタンはブラウザ経由で別途保存したい場合に使えます。
+- 接続キーは起動ごとに生成します。起動用URLから読み込んだキーはアドレスバーから直ちに取り除き、タブのメモリにのみ保持します。
+- 再読み込み時は、起動ウィンドウの `Open:` のURLを開き直すか、接続設定に `Connection key:` を入力してください。
+- 設定のみlocalStorageに保存します。URL・接続キー・履歴はブラウザの永続ストレージに保存しません。
+- 履歴は実行中のメモリ内に最大約200件保持します。終了すると履歴は消えますが、ファイルは残ります。
+- ブラウザのタブを閉じても処理は継続します。起動ウィンドウを終了すると進行中の処理も停止します。
+
+## 接続できないとき
+
+- **起動できない**：Python 3.10以降が入っているか、ZIP全体を展開したか確認してください。初回のパッケージ導入にはネット接続が必要です。
+- **ポートが使用中**：古い起動ウィンドウを閉じるか、`--port 9732` で起動します。
+- **再読み込み後に未接続**：起動ウィンドウの `Open:` のURLを開き直します。
+- **FFmpegが未導入**：上記の手順で導入して再起動します。未導入時は音声の「変換しない」かつメタデータOFFのみ実行できます。
+- **画面が見つからない**：起動ファイルや `bridge.py` だけを移動せず、フォルダー全体を同じ構成のまま配置します。
+
+サーバーは `127.0.0.1` だけで待ち受けます。操作APIは接続キーとHost / Originを確認し、同じローカルサーバー以外のWebサイトからの操作を拒否します。
+スマートフォンや別PCからの利用、外部への公開、Cookie送信、ログイン代行、任意の追加コマンドには対応していません。
+
+## 更新と配布
+
+このリポジトリをclone・ZIP展開した場合、同梱の `yt_dlp` を優先して実行します。
+更新は `git pull` または新しいZIPへの置き換えで行います。
+yt-dlp本体のコードはこのUIのために変更していません。
+
+小さな起動セットだけを配布する場合、次のコマンドで `dist/yt-dlp-local.zip` を作れます。
+これは**配布用の任意操作**で、通常の起動にビルド・パッケージ生成は不要です。
 
 ```sh
-python devscripts/package_pages_bridge.py
-python -m http.server 8080 --directory docs
+python devscripts/package_local_ui.py
 ```
 
-上記は表示確認用です。別ポートの画面からブリッジに接続する場合は
-`python docs/bridge/bridge.py --origin http://localhost:8080` のように許可Originを指定します。
+このZIPには画面・起動スクリプトを同梱し、yt-dlp本体は初回起動時にpipで導入します。
+単体ZIPのyt-dlpを更新する場合は、展開先で次を実行します。
 
-## 検証
+```powershell
+.venv\Scripts\python.exe -m pip install -U "yt-dlp[default]"
+```
+
+macOS / Linuxでは `.venv/bin/python` に読み替えてください。
+Pagesへの公開ワークフローは削除しました。GitHub ActionsはWindows / LinuxでローカルUIのテストだけを行います。
+
+## 開発時の検証
 
 ```sh
 python -m unittest discover -s web-tests -p 'test_*.py' -v
 node --test web-tests/core.test.mjs
+node --check docs/app.js
 ```
 
-ブリッジの認証・Origin / Host制限、オプション検証、キュー処理、中止、ファイル制限、
-コマンドの引用処理を検証します。外部サイトにアクセスしないテストでCIを実行します。
-ネットワークを使う実機確認は、保存を許可されたURLで別途行ってください。
+起動URL、ローカルHTTP配信、認証・Origin / Host制限、キュー、中止、ファイル制限、コマンド生成を検証します。
+ブラウザのレンダリングや外部ホスティングは必要ありません。
 
-## 制約
-
-サイトの仕様変更、ログイン、地域制限、DRM、配信元の制限などで取得できない動画があります。
-変換で元の映像や音声の品質が向上することはありません。自分のコンテンツや保存を許可されたメディアに使用してください。
-
-## 仕様の参考
-
-- [GitHub Pagesの概要](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
-- [ChromeのLocal Network Access](https://developer.chrome.com/blog/local-network-access)
-- [yt-dlp README](README.md)
-
-このWeb UIとブリッジは本リポジトリのLICENSEに従います。
+取得できる形式・画質は配信元に依存します。サイトの変更、ログイン、地域制限、DRMなどによって取得できない場合があります。
+自分のコンテンツや保存を許可されたメディアに使用してください。
+このUIは本リポジトリのLICENSEに従います。yt-dlp本体の仕様は [README](README.md) を参照してください。
